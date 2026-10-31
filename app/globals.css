@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #05080B;
+  --foreground: #EDEDED;
+  --neon: #00FF66;
+  --neon-glow: rgba(0, 255, 102, 0.4);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Neon Glow Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #070B0E;
+}
+::-webkit-scrollbar-thumb {
+  background: #112217;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00FF66;
+  box-shadow: 0 0 10px #00FF66;
+}
+
+.glow-border {
+  border: 1px solid rgba(0, 255, 102, 0.25);
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.08);
+}
+.glow-border-active {
+  border: 1px solid #00FF66;
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.3);
+}
+
+.neon-text-glow {
+  text-shadow: 0 0 12px rgba(0, 255, 102, 0.6);
+}
