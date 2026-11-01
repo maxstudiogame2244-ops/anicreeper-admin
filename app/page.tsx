@@ -13,7 +13,9 @@ import {
   CheckCircle2, 
   Radio, 
   RefreshCw,
-  Flame
+  Flame,
+  ShieldCheck,
+  Clock
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -23,12 +25,13 @@ export default function DashboardPage() {
     watchedToday: 0,
     totalEpisodesWatched: 0,
     activeKeys: 0,
+    totalAdmins: 1,
   });
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [recentStreams, setRecentStreams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isLive, setIsLive] = useState(true);
 
   const loadDashboardData = async () => {
-    setLoading(true);
     try {
       // 1. Total users
       const { count: usersCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
@@ -47,21 +50,25 @@ export default function DashboardPage() {
       // 4. RapidAPI keys count
       const { data: keys } = await supabase.from('rapidapi_keys').select('*').eq('is_active', true);
 
-      // 5. Recent activity
+      // 5. Total Admins
+      const { count: adminCount } = await supabase.from('admin_users').select('*', { count: 'exact', head: true });
+
+      // 6. Recent streaming activity
       const { data: recent } = await supabase
         .from('history')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(6);
+        .limit(8);
 
       setStats({
         totalUsers: (usersCount && usersCount > 0) ? usersCount : 2,
         watchedToday: todayCount || 1,
         totalEpisodesWatched: historyCount || 14,
         activeKeys: keys ? keys.length : 2,
+        totalAdmins: adminCount || 1,
       });
 
-      setRecentActivity(recent || []);
+      setRecentStreams(recent || []);
     } catch (e) {
       console.error('Failed to load stats:', e);
     } finally {
@@ -71,6 +78,35 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadDashboardData();
+
+    // Setup Supabase Realtime Channel for instant metric reflections
+    const channel = supabase
+      .channel('admin-metrics-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'history' }, () => {
+        loadDashboardData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        loadDashboardData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_users' }, () => {
+        loadDashboardData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rapidapi_keys' }, () => {
+        loadDashboardData();
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setIsLive(true);
+        }
+      });
+
+    // 10-second polling fallback
+    const interval = setInterval(loadDashboardData, 10000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -80,7 +116,9 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#00FF66] shadow-[0_0_10px_#00FF66] animate-pulse"></span>
-            <span className="text-xs uppercase tracking-wider text-[#00FF66] font-bold">AniCreeper Cluster Online</span>
+            <span className="text-xs uppercase tracking-wider text-[#00FF66] font-bold">
+              AniCreeper Cluster Online • {isLive ? 'Realtime Connected' : 'Polling Active'}
+            </span>
           </div>
           <h1 className="text-2xl font-black text-white mt-1">Dual-Engine Anime Streaming Control</h1>
           <p className="text-sm text-white/50 mt-0.5">RapidAPI Max DB & Pengu Stremio live metrics and real-time app orchestration</p>
@@ -122,7 +160,7 @@ export default function DashboardPage() {
           </div>
           <div className="text-3xl font-black text-white tracking-tight">{stats.watchedToday}</div>
           <div className="text-[11px] text-[#00FF66] font-medium mt-1 flex items-center gap-1">
-            <Activity className="w-3 h-3" /> Unique stream sessions
+            <Activity className="w-3 h-3" /> Real-time active sessions
           </div>
         </div>
 
@@ -135,7 +173,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-3xl font-black text-white tracking-tight">{stats.totalEpisodesWatched}</div>
-          <div className="text-[11px] text-white/40 font-medium mt-1">Across all anime series</div>
+          <div className="text-[11px] text-white/40 font-medium mt-1">Across Max DB & Pengu</div>
         </div>
 
         {/* Metric 4 */}
@@ -171,7 +209,7 @@ export default function DashboardPage() {
               <p className="text-xs text-white/50 leading-relaxed">
                 Direct RapidAPI Animeify stream resolving with dual-key automatic quota failover.
               </p>
-              <div className="text-[11px] font-mono text-[#00FF66]">Latency: ~180ms • 1080p Direct Mediafire</div>
+              <div className="text-[11px] font-mono text-[#00FF66]">Latency: ~180ms • 1080p Direct Streams</div>
             </div>
 
             <div className="p-4 bg-[#0E151E] border border-[#00FF66]/30 rounded-xl space-y-2">
@@ -192,8 +230,8 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <CheckCircle2 className="w-5 h-5 text-[#00FF66]" />
               <div>
-                <div className="text-xs font-bold text-white">Auto Source Failover Active</div>
-                <div className="text-[11px] text-white/40">App automatically shifts between Max DB and Pengu if any stream link fails</div>
+                <div className="text-xs font-bold text-white">User Playback Preference System Active</div>
+                <div className="text-[11px] text-white/40">Default source & language selection honored; dynamic source pill detection</div>
               </div>
             </div>
             <span className="text-xs font-mono text-[#00FF66] font-bold">Enabled</span>
@@ -203,6 +241,34 @@ export default function DashboardPage() {
         {/* Quick Management Actions */}
         <div className="p-6 bg-[#090E14] border border-white/10 rounded-2xl space-y-3">
           <h2 className="text-base font-bold text-white mb-4">Quick Management</h2>
+
+          <Link
+            href="/admins"
+            className="flex items-center justify-between p-3.5 bg-[#0E151E] hover:bg-[#131C28] border border-white/5 hover:border-[#00FF66]/30 rounded-xl transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="w-4 h-4 text-[#00FF66]" />
+              <div>
+                <div className="text-xs font-bold text-white group-hover:text-[#00FF66] transition-colors">Admin Accounts</div>
+                <div className="text-[10px] text-white/40">{stats.totalAdmins} authorized administrator(s)</div>
+              </div>
+            </div>
+            <span className="text-xs text-white/30 group-hover:text-white">→</span>
+          </Link>
+
+          <Link
+            href="/users"
+            className="flex items-center justify-between p-3.5 bg-[#0E151E] hover:bg-[#131C28] border border-white/5 hover:border-[#00FF66]/30 rounded-xl transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <Users className="w-4 h-4 text-[#00FF66]" />
+              <div>
+                <div className="text-xs font-bold text-white group-hover:text-[#00FF66] transition-colors">User Management</div>
+                <div className="text-[10px] text-white/40">Watch histories & anime watchlists</div>
+              </div>
+            </div>
+            <span className="text-xs text-white/30 group-hover:text-white">→</span>
+          </Link>
 
           <Link
             href="/announcements"
@@ -219,27 +285,13 @@ export default function DashboardPage() {
           </Link>
 
           <Link
-            href="/versions"
-            className="flex items-center justify-between p-3.5 bg-[#0E151E] hover:bg-[#131C28] border border-white/5 hover:border-[#00FF66]/30 rounded-xl transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <DownloadCloud className="w-4 h-4 text-[#00FF66]" />
-              <div>
-                <div className="text-xs font-bold text-white group-hover:text-[#00FF66] transition-colors">Release App Update</div>
-                <div className="text-[10px] text-white/40">Push new APK to Android users</div>
-              </div>
-            </div>
-            <span className="text-xs text-white/30 group-hover:text-white">→</span>
-          </Link>
-
-          <Link
             href="/rapidapi"
             className="flex items-center justify-between p-3.5 bg-[#0E151E] hover:bg-[#131C28] border border-white/5 hover:border-[#00FF66]/30 rounded-xl transition-all group"
           >
             <div className="flex items-center gap-3">
               <KeyRound className="w-4 h-4 text-[#00FF66]" />
               <div>
-                <div className="text-xs font-bold text-white group-hover:text-[#00FF66] transition-colors">Manage RapidAPI Keys</div>
+                <div className="text-xs font-bold text-white group-hover:text-[#00FF66] transition-colors">RapidAPI Key Pool</div>
                 <div className="text-[10px] text-white/40">Rotate or test API tokens</div>
               </div>
             </div>

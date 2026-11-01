@@ -25,6 +25,7 @@ export default function Sidebar() {
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'RapidAPI Keys', href: '/rapidapi', icon: KeyRound },
     { name: 'User Management', href: '/users', icon: Users },
+    { name: 'Admin Accounts', href: '/admins', icon: ShieldCheck },
     { name: 'In-App Notices', href: '/announcements', icon: Megaphone },
     { name: 'App Releases (APK)', href: '/versions', icon: DownloadCloud },
   ];
